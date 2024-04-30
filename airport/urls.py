@@ -12,6 +12,7 @@ from airport.views import (
     AirlineViewSet,
     FlightViewSet,
     OrderViewSet,
+    AllocateTicketAPIView,
 )
 
 router = routers.DefaultRouter()
@@ -26,7 +27,12 @@ router.register("flights", FlightViewSet)
 router.register("orders", OrderViewSet)
 
 urlpatterns = [
-    path("", include(router.urls))
+    path("", include(router.urls)),
+    path(
+        "tickets/<int:ticket_id>/allocate/",
+        AllocateTicketAPIView.as_view(),
+        name="ticket_allocate"
+    )
 ]
 
 app_name = "airport"

@@ -1,8 +1,10 @@
 from datetime import datetime
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
+from rest_framework.generics import GenericAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
@@ -18,6 +20,7 @@ from airport.models import (
     Order,
     Airline,
     Crew,
+    Ticket,
 )
 
 from airport.serializers import (
@@ -42,6 +45,7 @@ from airport.serializers import (
     AirlineListSerializer,
     AirlineSerializer,
     CrewSerializer,
+    TicketSerializer,
 )
 
 
@@ -318,3 +322,27 @@ class OrderViewSet(
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class AllocateTicketAPIView(GenericAPIView):
+    serializer_class = TicketSerializer
+
+    def patch(self, request, ticket_id):
+        try:
+            ticket = Ticket.objects.get(pk=ticket_id)
+        except ObjectDoesNotExist as e:
+            return Response(
+                {"error": f"Ticket not found: {e}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if ticket.ticket_type == "check-in-completed":
+            return Response(
+                {"error": "Ticket is already allocated"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ticket.allocate_seat()
+
+        serializer = TicketSerializer(ticket)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -4,7 +4,7 @@ import pytz
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
@@ -339,6 +339,11 @@ class Order(models.Model):
 
 
 class Ticket(models.Model):
+    TYPE_CHOICES = [
+        ("check-in-pending", "Check-in-pending"),
+        ("check-in-completed", "Check-in-completed")
+    ]
+
     order = models.ForeignKey(
         Order,
         related_name="tickets",
@@ -351,6 +356,11 @@ class Ticket(models.Model):
     seat_number = models.IntegerField(
         blank=True,
         null=True
+    )
+    ticket_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default="check-in-completed"
     )
     flight = models.ForeignKey(
         Flight,
@@ -421,6 +431,66 @@ class Ticket(models.Model):
                         )
                     }
                 )
+
+    def allocate_seat(self):
+        # automated allocation logic, for example, by check-in
+        if self.ticket_type == "check-in-pending":
+            seat_row, seat_number = self.get_last_available_seat()
+            if seat_row is not None and seat_number is not None:
+                self.seat_row = seat_row  # Assigning the row to the ticket
+                self.seat_number = (
+                    seat_number  # Assigning the seat number to the ticket
+                )
+                self.ticket_type = "check-in-completed"
+                self.save()
+
+    def get_last_available_seat(self):
+        airplane = self.flight.airplane
+
+        # Basically there is a related Seat model with a field seat_number
+        # and it has a foreign key to Airplane
+        rows = (
+            Seat.objects.filter(airplane=airplane)
+            .values_list("row", flat=True)
+            .distinct()
+            .order_by("row")
+        )
+
+        # Iterate through each row
+        for row in rows:
+            booked_seats_in_row = Ticket.objects.filter(
+                flight=self.flight, seat_row=row
+            )
+
+            # max number of seat in row
+            max_seat_in_row = self.get_max_seat_in_row()
+
+            # first free seat in a row
+            for seat_number in range(1, max_seat_in_row + 1):
+                if not booked_seats_in_row.filter(
+                    seat_number=seat_number
+                ).exists():
+                    return row, seat_number
+                    # If available seat is found, exit the loop
+                    break
+
+            return None, None
+
+    def get_max_seat_in_row(self):
+        # Get the related Airplane for the current Ticket
+        airplane = self.flight.airplane
+
+        # Leveraging relationship: there is a related Seat model
+        # with a field seat_number
+        # and it has a foreign key to Airplane
+        max_seat_in_row = (
+            Seat.objects.filter(airplane=airplane)
+            .values("row")
+            .annotate(max_seat=Count("number"))
+            .aggregate(Max("max_seat"))
+        )["max_seat__max"]
+
+        return max_seat_in_row
 
     def clean(self):
         Ticket.validate_ticket(

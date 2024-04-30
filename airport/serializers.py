@@ -94,7 +94,8 @@ class AirplaneSerializer(serializers.ModelSerializer):
             "total_rows",
             'standard_number_seats_in_row',
             "unusual_rows_with_seat_count",
-            "airline"
+            "airline",
+            "image"
         )
 
     def get_total_rows(self, obj):
@@ -127,7 +128,8 @@ class AirplaneListSerializer(AirplaneSerializer):
             "airplane_type",
             "total_seats",
             "total_rows",
-            "airline"
+            "airline",
+            "image"
         )
 
 
@@ -215,6 +217,12 @@ class AirplaneCreateSerializer(serializers.ModelSerializer):
                     row=index + 1,
                     number=seat_number
                 )
+
+
+class AirplaneImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Airplane
+        fields = ("id", "image")
 
 
 class AirlineSerializer(serializers.ModelSerializer):

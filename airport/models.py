@@ -1,11 +1,16 @@
+import os
+import uuid
 import pytz
+
 from django.conf import settings
 from django.db import models
 from django.db.models import Count
+from django.utils.text import slugify
+from rest_framework.exceptions import ValidationError
+
 from geopy.distance import geodesic
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from geopy.geocoders import Nominatim
-from rest_framework.exceptions import ValidationError
 
 
 class Country(models.Model):
@@ -160,6 +165,13 @@ class AirplaneType(models.Model):
         return self.name
 
 
+def airplane_image_file_path(instance, filename):
+    _, extension = os.path.splitext(filename)
+    filename = f"{slugify(instance.name)}-{uuid.uuid4()}{extension}"
+
+    return os.path.join("uploads", "airplanes", filename)
+
+
 class Airplane(models.Model):
     name = models.CharField(max_length=255)
     airplane_type = models.ForeignKey(
@@ -171,6 +183,11 @@ class Airplane(models.Model):
         Airline,
         related_name="airplanes",
         on_delete=models.CASCADE
+    )
+    image = models.ImageField(
+        blank=True,
+        null=True,
+        upload_to=airplane_image_file_path
     )
 
     def __str__(self) -> str:

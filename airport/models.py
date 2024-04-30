@@ -5,6 +5,7 @@ from django.db.models import Count
 from geopy.distance import geodesic
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from geopy.geocoders import Nominatim
+from rest_framework.exceptions import ValidationError
 
 
 class Country(models.Model):
@@ -403,6 +404,14 @@ class Ticket(models.Model):
                         )
                     }
                 )
+
+    def clean(self):
+        Ticket.validate_ticket(
+            self.seat_row,
+            self.seat_number,
+            self.flight,
+            ValidationError
+        )
 
     def save(
         self,

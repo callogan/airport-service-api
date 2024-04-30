@@ -9,6 +9,7 @@ from airport.models import (
     Airplane,
     Seat,
     Airline,
+    AirlineRating,
     Crew,
     Flight,
     Order,
@@ -59,8 +60,27 @@ class AirlineAdmin(admin.ModelAdmin):
         "headquarters",
         "iata_code",
         "web_site_address",
-        "url_logo"
+        "url_logo",
+        "overall_rating"
     )
+
+    @admin.display(description="overall_rating")
+    def overall_rating(self, obj):
+        return obj.overall_rating
+
+
+@admin.register(AirlineRating)
+class RatingAdmin(admin.ModelAdmin):
+    list_display = (
+        "boarding_deplaining_rating",
+        "crew_rating",
+        "services_rating",
+        "entertainment_rating",
+        "wi_fi_rating",
+        "airline"
+    )
+    list_filter = ("airline",)
+    search_fields = ("airline__name",)
 
 
 @admin.register(Crew)

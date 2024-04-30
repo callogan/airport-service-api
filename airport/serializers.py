@@ -11,6 +11,7 @@ from airport.models import (
     Airplane,
     Seat,
     Airline,
+    AirlineRating,
     Crew,
     Flight,
     Order,
@@ -227,6 +228,12 @@ class AirplaneImageSerializer(serializers.ModelSerializer):
 
 class AirlineSerializer(serializers.ModelSerializer):
     fleet_size = serializers.SerializerMethodField()
+    overall_rating = serializers.SerializerMethodField()
+    average_boarding_deplaining_rating = serializers.SerializerMethodField()
+    average_crew_rating = serializers.SerializerMethodField()
+    average_services_rating = serializers.SerializerMethodField()
+    average_entertainment_rating = serializers.SerializerMethodField()
+    average_wi_fi_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Airline
@@ -237,17 +244,62 @@ class AirlineSerializer(serializers.ModelSerializer):
             "web_site_address",
             "iata_code",
             "url_logo",
-            "fleet_size"
+            "fleet_size",
+            "overall_rating",
+            "average_boarding_deplaining_rating",
+            "average_crew_rating",
+            "average_services_rating",
+            "average_entertainment_rating",
+            "average_wi_fi_rating"
         )
 
     def get_fleet_size(self, obj):
         return obj.fleet_size
+
+    def get_overall_rating(self, obj):
+        return obj.overall_rating.get("overall_rating", 0)
+
+    def get_average_boarding_deplaining_rating(self, obj):
+        return obj.overall_rating.get("avg_boarding_deplaining", 0)
+
+    def get_average_crew_rating(self, obj):
+        return obj.overall_rating.get("avg_crew", 0)
+
+    def get_average_services_rating(self, obj):
+        return obj.overall_rating.get("avg_services", 0)
+
+    def get_average_entertainment_rating(self, obj):
+        return obj.overall_rating.get("avg_entertainment", 0)
+
+    def get_average_wi_fi_rating(self, obj):
+        return obj.overall_rating.get("avg_wi_fi", 0)
 
 
 class AirlineListSerializer(AirlineSerializer):
     class Meta:
         model = Airline
         fields = ("id", "name", "headquarters", "iata_code", "url_logo")
+
+
+class AirlineRatingSerializer(serializers.ModelSerializer):
+    airline_name = serializers.SlugRelatedField(
+        queryset=Airline.objects.all(),
+        source="airline",
+        slug_field="name"
+    )
+
+    class Meta:
+        model = AirlineRating
+        fields = (
+            "id",
+            "airline_name",
+            "boarding_deplaining_rating",
+            "crew_rating",
+            "services_rating",
+            "entertainment_rating",
+            "wi_fi_rating",
+            "created_at"
+        )
 
 
 class CrewSerializer(serializers.ModelSerializer):

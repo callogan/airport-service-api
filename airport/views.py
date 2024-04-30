@@ -16,10 +16,11 @@ from airport.models import (
     Airplane,
     AirplaneType,
     Route,
+    Airline,
+    AirlineRating,
+    Crew,
     Flight,
     Order,
-    Airline,
-    Crew,
     Ticket,
 )
 
@@ -37,14 +38,15 @@ from airport.serializers import (
     RouteSerializer,
     RouteListSerializer,
     RouteDetailSerializer,
+    AirlineSerializer,
+    AirlineListSerializer,
+    AirlineRatingSerializer,
+    CrewSerializer,
     FlightSerializer,
     FlightListSerializer,
     FlightDetailSerializer,
     OrderSerializer,
     OrderListSerializer,
-    AirlineListSerializer,
-    AirlineSerializer,
-    CrewSerializer,
     TicketSerializer,
 )
 
@@ -172,6 +174,40 @@ class AirlineViewSet(
             serializer.data
         )
         return paginated_response
+
+
+class AirlineRatingPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
+
+
+class AirlineRatingViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = AirlineRating.objects.all()
+    serializer_class = AirlineRatingSerializer
+    pagination_class = AirlineRatingPagination
+
+    def get_queryset(self):
+        airline_name = self.request.query_params.get("airline_name")
+
+        if airline_name:
+            self.queryset = self.queryset.filter(
+                airline__name__icontains=airline_name
+            )
+
+        return self.queryset
+
+    def list(self, request, *args, **kwargs):
+        if "airline_name" in request.query_params:
+            return super().list(request, *args, **kwargs)
+        else:
+            return Response(
+                {"status": "Query parameter 'airline_name' is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class CrewViewSet(

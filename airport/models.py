@@ -4,7 +4,7 @@ import pytz
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Avg
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
@@ -99,6 +99,97 @@ class Airline(models.Model):
     @property
     def fleet_size(self):
         return self.airplanes.count()
+
+    @property
+    def overall_rating(self):
+        WEIGHTS = {
+            "avg_boarding_deplaining": 0.05,
+            "avg_crew": 0.2,
+            "avg_services": 0.15,
+            "avg_entertainment": 0.1,
+            "avg_wi_fi": 0.05,
+        }
+
+        rating_per_category = self.ratings.filter(airline=self).aggregate(
+            avg_boarding_deplaining=Avg("boarding_deplaining_rating"),
+            avg_crew=Avg("crew_rating"),
+            avg_services=Avg("services_rating"),
+            avg_entertainment=Avg("entertainment_rating"),
+            avg_wi_fi=Avg("wi_fi_rating"),
+        )
+
+        total_score = 0
+        total_weight = 0
+
+        result_dict = {"overall_rating": 0}
+
+        for category, rating in rating_per_category.items():
+            value = rating
+            if value is None:
+                continue
+            weight = WEIGHTS.get(category, 0)
+
+            total_score += value * weight
+            total_weight += weight
+
+            result_dict[category] = round(value, 1)
+
+        if total_weight > 0:
+            result_dict["overall_rating"] = round(
+                total_score / total_weight,
+                1
+            )
+        return result_dict
+
+
+class AirlineRating(models.Model):
+    SCORE_CHOICES = [
+        (1, "1"),
+        (2, "2"),
+        (3, "3"),
+        (4, "4"),
+        (5, "5")
+    ]
+
+    boarding_deplaining_rating = models.SmallIntegerField(
+        choices=SCORE_CHOICES,
+        default=0,
+        blank=True,
+        null=True
+    )
+    crew_rating = models.SmallIntegerField(
+        choices=SCORE_CHOICES,
+        default=0,
+        blank=True,
+        null=True
+    )
+    services_rating = models.SmallIntegerField(
+        choices=SCORE_CHOICES,
+        default=0,
+        blank=True,
+        null=True
+    )
+    entertainment_rating = models.SmallIntegerField(
+        choices=SCORE_CHOICES,
+        default=0,
+        blank=True,
+        null=True
+    )
+    wi_fi_rating = models.SmallIntegerField(
+        choices=SCORE_CHOICES,
+        default=0,
+        blank=True,
+        null=True
+    )
+    airline = models.ForeignKey(
+        Airline,
+        related_name="ratings",
+        on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class Route(models.Model):

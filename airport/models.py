@@ -459,14 +459,6 @@ class Ticket(models.Model):
         on_delete=models.CASCADE
     )
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["seat_row", "seat_number", "flight"],
-                name="unique_row_seat_flight",
-            )
-        ]
-
     def __str__(self):
         return f"{str(self.flight)} " \
                f"(row: {self.seat_row}, seat: {self.seat_number})"

@@ -468,7 +468,7 @@ class Ticket(models.Model):
         airplane = flight.airplane
 
         if seat_row is not None:
-            # Check if row exists for the given aircraft
+            # Check if row exists for the specified airplane
             matching_rows = Seat.objects.filter(
                 airplane=airplane,
                 row=seat_row
@@ -478,13 +478,13 @@ class Ticket(models.Model):
                 raise error_to_raise(
                     {
                         "row": (
-                            f"Row number {seat_row} does not exist "
-                            "for the specified airplane."
+                            f"Row {seat_row} does not exist "
+                            "in the specified airplane."
                         )
                     }
                 )
 
-            # If row is valid, check seat_number
+            # If row is valid, check seat
             if seat_number is not None:
                 matching_seats = matching_rows.filter(number=seat_number)
 
@@ -492,23 +492,22 @@ class Ticket(models.Model):
                     raise error_to_raise(
                         {
                             "seat": (
-                                f"Seat number {seat_number} does not exist "
-                                f"for the specified airplane "
-                                f"and row {seat_row}."
+                                f"Seat {seat_number} does not exist "
+                                f"in row {seat_row} in the specified airplane."
                             )
                         }
                     )
 
             # Check if there are no existing tickets
-            # with the specified row and seat for the given flight
+            # with the same row and seat for the specified flight
             existing_tickets = Ticket.objects.filter(
-                flight=flight, seat_number=seat_number, seat_row=seat_row
+                flight=flight, seat_row=seat_row, seat_number=seat_number
             )
             if existing_tickets.exists():
                 raise error_to_raise(
                     {
                         "row": (
-                            f"Ticket with row number {seat_row} "
+                            f"Ticket with row {seat_row} "
                             f"and seat {seat_number} already exists "
                             f"for the specified flight."
                         )

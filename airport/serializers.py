@@ -1,4 +1,5 @@
 from django.db import transaction
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -80,10 +81,22 @@ class AirplaneTypeSerializer(serializers.ModelSerializer):
 
 
 class AirplaneSerializer(serializers.ModelSerializer):
-    total_rows = serializers.SerializerMethodField()
-    total_seats = serializers.SerializerMethodField()
-    standard_number_seats_in_row = serializers.SerializerMethodField()
-    unusual_rows_with_seat_count = serializers.SerializerMethodField()
+    total_rows = serializers.SerializerMethodField(
+        help_text="Total number of rows in the airplane."
+    )
+    total_seats = serializers.SerializerMethodField(
+        help_text="Total number of seats in the airplane."
+    )
+    standard_number_seats_in_row = serializers.SerializerMethodField(
+        help_text="Number of seats in the row in the airplane "
+                  "with standard seat layout."
+    )
+    unusual_rows_with_seat_count = serializers.SerializerMethodField(
+        help_text="The list of dictionaries where each dictionary contains "
+                  "the information about numerical position of the row and "
+                  "the number of seats in such row - in the airplane "
+                  "with unusual seat layout."
+    )
 
     class Meta:
         model = Airplane
@@ -99,16 +112,16 @@ class AirplaneSerializer(serializers.ModelSerializer):
             "image"
         )
 
-    def get_total_rows(self, obj):
+    def get_total_rows(self, obj) -> int:
         return obj.total_rows
 
-    def get_total_seats(self, obj):
+    def get_total_seats(self, obj) -> int:
         return obj.total_seats
 
-    def get_standard_number_seats_in_row(self, obj):
+    def get_standard_number_seats_in_row(self, obj) -> int:
         return obj.standard_number_seats_in_row
 
-    def get_unusual_rows_with_seat_count(self, obj):
+    def get_unusual_rows_with_seat_count(self, obj) -> dict:
         if obj.standard_number_seats_in_row is not None:
             return None
         else:
@@ -134,12 +147,44 @@ class AirplaneListSerializer(AirplaneSerializer):
         )
 
 
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Standard seat layout",
+            value={
+                "total_rows": 20,
+                "total_seats": 120
+            }
+        ),
+        OpenApiExample(
+            "Unusual seat layout",
+            value={
+                "row_seats_distribution": [
+                    2, 3, 3, 3, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2
+                ]
+            }
+        )
+    ]
+)
 class AirplaneCreateSerializer(serializers.ModelSerializer):
-    total_rows = serializers.IntegerField(required=False)
-    total_seats = serializers.IntegerField(required=False)
+    total_rows = serializers.IntegerField(
+        required=False,
+        help_text="Total number of rows in the airplane "
+                  "with standard seat layout."
+    )
+    total_seats = serializers.IntegerField(
+        required=False,
+        help_text="Total number of seats in the airplane "
+                  "with standard seat layout."
+    )
     row_seats_distribution = serializers.ListField(
         child=serializers.IntegerField(),
-        required=False
+        required=False,
+        help_text="The list where each element represents the number of seats "
+                  "in the certain row of the airplane, and the position "
+                  "of each element corresponds to the row number "
+                  "in the airplane where these seats are located - "
+                  "for the airplane with unusual seat layout."
     )
 
     class Meta:
@@ -318,7 +363,7 @@ class RouteDetailSerializer(RouteSerializer):
         slug_field="name"
     )
 
-    airlines = AirlineListSerializer()
+    airlines = AirlineListSerializer(many=True)
 
     class Meta:
         model = Route

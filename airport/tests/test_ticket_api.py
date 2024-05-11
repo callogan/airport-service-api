@@ -25,7 +25,7 @@ from airport.models import (
 
 
 def allocate_url(ticket_id):
-    return reverse("airport:ticket_allocate", args=[ticket_id])
+    return reverse("airport:ticket-allocate-seat", args=[ticket_id])
 
 
 class AuthenticatedTicketApiTests(TestCase):

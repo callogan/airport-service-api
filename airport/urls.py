@@ -13,7 +13,7 @@ from airport.views import (
     AirlineRatingViewSet,
     FlightViewSet,
     OrderViewSet,
-    AllocateTicketAPIView,
+    AllocateSeatTicketAPIView,
 )
 
 router = routers.DefaultRouter()
@@ -31,9 +31,9 @@ router.register("orders", OrderViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path(
-        "tickets/<int:ticket_id>/allocate/",
-        AllocateTicketAPIView.as_view(),
-        name="ticket_allocate"
+        "tickets/<int:ticket_id>/allocate-seat/",
+        AllocateSeatTicketAPIView.as_view(),
+        name="ticket-allocate-seat"
     )
 ]
 

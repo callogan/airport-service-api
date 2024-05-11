@@ -2,6 +2,8 @@ from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
@@ -213,6 +215,16 @@ class AirlineRatingViewSet(
 
         return self.queryset
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="airline",
+                description="Airline_name is required query parameter "
+                            "to access the list of ratings for the specified "
+                            "airline, otherwise such access will be denied.",
+                required=True)
+        ]
+    )
     def list(self, request, *args, **kwargs):
         if "airline_name" in request.query_params:
             return super().list(request, *args, **kwargs)
@@ -290,6 +302,44 @@ class RouteViewSet(
             )
         return self.queryset
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="country_from",
+                description="Filter by country of the departure "
+                            "(ex. ?country_from=USA)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="country_to",
+                description="Filter by country of the destination "
+                            "(ex. ?country_to=Germany)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="city_from",
+                description="Filter by city of the departure "
+                            "(ex. ?city_from=New York)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="city_to",
+                description="Filter by city of the destination "
+                            "(ex. ?city_to=Berlin)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="route",
+                description="Filter by city of the departure & city "
+                            "of the destination (ex. ?route=New York-Berlin)",
+                type=OpenApiTypes.STR
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return response
+
 
 class FlightPagination(PageNumberPagination):
     page_size = 10
@@ -345,6 +395,31 @@ class FlightViewSet(
 
         return self.queryset
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="airport_from",
+                description="Filter by airport of the departure "
+                            "(ex. ?airport_from=JFK)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="airport_to",
+                description="Filter by airport of the destination "
+                            "(ex. ?airport_to=Berlin Central)",
+                type=OpenApiTypes.STR
+            ),
+            OpenApiParameter(
+                name="date",
+                description="Filter by date of the departure "
+                            "(ex. ?date=2024-03-18)",
+                type=OpenApiTypes.DATE
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class OrderPagination(PageNumberPagination):
     page_size = 10
@@ -377,10 +452,21 @@ class OrderViewSet(
         serializer.save(user=self.request.user)
 
 
-class AllocateTicketAPIView(GenericAPIView):
+class AllocateSeatTicketAPIView(GenericAPIView):
     serializer_class = TicketSerializer
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        description="This method allocates the seat for the ticket "
+                    "by providing both row and number parameters. "
+                    "Such allocation occurs upon successful completion "
+                    "of the check-in procedure prior to boarding the flight. "
+                    "AllocateSeatTicketAPIView with method patch "
+                    "is specifically designed only for implementing "
+                    "the functionality of allocating seats for tickets "
+                    "with a status of 'check-in-pending'.",
+        responses={status.HTTP_200_OK: TicketSerializer}
+    )
     def patch(self, request, ticket_id):
         try:
             ticket = Ticket.objects.get(pk=ticket_id)
@@ -392,7 +478,7 @@ class AllocateTicketAPIView(GenericAPIView):
 
         if ticket.ticket_type == "check-in-completed":
             return Response(
-                {"error": "Ticket is already allocated"},
+                {"error": "Seat is already allocated"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
